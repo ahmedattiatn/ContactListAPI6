@@ -5,15 +5,11 @@ package ahmedattia.contactlisttestforteedji.activities;
  */
 
 import android.Manifest;
-import android.app.AlertDialog;
-import android.content.Context;
-import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.ContactsContract;
-import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -30,9 +26,8 @@ import ahmedattia.contactlisttestforteedji.R;
 import ahmedattia.contactlisttestforteedji.adapters.AllContactsAdapter;
 import ahmedattia.contactlisttestforteedji.model.ContactVO;
 
-public class AllContacts extends AppCompatActivity {
-    final int PERMISSION_ALL = 1;
-    final String[] PERMISSIONS = {Manifest.permission.READ_CONTACTS, Manifest.permission.CALL_PHONE, Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE};
+public class AllContactsVerySimplePermission extends AppCompatActivity {
+    private static final int PERMISSIONS_REQUEST = 100;
     RecyclerView rvContacts;
     EditText search;
     List<ContactVO> contactVOList; // lists of contacts
@@ -44,55 +39,39 @@ public class AllContacts extends AppCompatActivity {
         setContentView(R.layout.activity_all_contacts);
         rvContacts = (RecyclerView) findViewById(R.id.rvContacts);
         search = (EditText) findViewById(R.id.search);
-
-
-        checkForPermission();
-
-        //  getContactsDetails();
-        addTextListener(); // search for contacts using the TextListener
+        requestPermission();
+         // search for contacts using the TextListener
         getWindow().setSoftInputMode(
                 // hiding the key board on activity created
                 WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN
         );
-
     }
 
-    private void checkForPermission() {
-        if (!hasPermissions(AllContacts.this, PERMISSIONS)) {
-            AlertDialog.Builder builder = new AlertDialog.Builder(this);
-            builder.setTitle("Permissions !!")
-                    .setMessage(" This app need Permission to Access to your Contact , call phone And your storage")
-                    .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
-                        public void onClick(DialogInterface dialog, int id) {
-                            ActivityCompat.requestPermissions(AllContacts.this, PERMISSIONS, PERMISSION_ALL);
-                        }
-                    });
-            builder.create().show();
+    private void requestPermission() {
+        // Check the SDK version and whether the permission is already granted or not.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && checkSelfPermission(Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{Manifest.permission.READ_CONTACTS, Manifest.permission.CALL_PHONE}, PERMISSIONS_REQUEST);
+            //After this point you wait for callback in onRequestPermissionsResult(int, String[], int[]) overriden method
+        } else {
+            // Android version is lesser than 6.0 or the permission is already granted.
+            addTextListener();
+            getContactsDetails();
         }
     }
 
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions,
                                            int[] grantResults) {
-        if (requestCode == 1) {
-            getContactsDetails();
-        } else {
-            super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        }
-    }
+        if (requestCode == PERMISSIONS_REQUEST) {
 
-    public boolean hasPermissions(Context context, String... permissions) {
-        if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && context != null && permissions != null) {
-            for (String permission : permissions) {
-                if (ActivityCompat.checkSelfPermission(context, permission) != PackageManager.PERMISSION_GRANTED) {
-                    return false;
-                }
+            if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                // Permission is granted
+                addTextListener();
+                getContactsDetails();
+            } else {
+                Toast.makeText(this, "Until you grant the permission, we canot display the names", Toast.LENGTH_SHORT).show();
             }
         }
-        Toast.makeText(AllContacts.this, "All Permissions are Granted !!", Toast.LENGTH_LONG).show();
-        getContactsDetails();
-        return true;
-
     }
 
     private void addTextListener() {
@@ -123,7 +102,7 @@ public class AllContacts extends AppCompatActivity {
                 }
                 // set new adapter to the RecyclerView using the new list that we have
                 AllContactsAdapter contactAdapter = new AllContactsAdapter(filteredList, getApplicationContext());
-                rvContacts.setLayoutManager(new LinearLayoutManager(AllContacts.this));
+                rvContacts.setLayoutManager(new LinearLayoutManager(AllContactsVerySimplePermission.this));
                 rvContacts.setAdapter(contactAdapter);
             }
         });
@@ -133,7 +112,7 @@ public class AllContacts extends AppCompatActivity {
     private void getContactsDetails() {
         contactVOList = new ArrayList();
         ContactVO contactVO;
-        Cursor phones = AllContacts.this.getContentResolver().query(
+        Cursor phones = AllContactsVerySimplePermission.this.getContentResolver().query(
                 ContactsContract.CommonDataKinds.Phone.CONTENT_URI, null, null,
                 null, null);
         while (phones.moveToNext()) {
@@ -157,7 +136,7 @@ public class AllContacts extends AppCompatActivity {
 
         }
         AllContactsAdapter contactAdapter = new AllContactsAdapter(contactVOList, getApplicationContext());
-        rvContacts.setLayoutManager(new LinearLayoutManager(AllContacts.this));
+        rvContacts.setLayoutManager(new LinearLayoutManager(AllContactsVerySimplePermission.this));
         rvContacts.setAdapter(contactAdapter);
     }
 }
